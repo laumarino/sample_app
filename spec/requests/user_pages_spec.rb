@@ -44,16 +44,30 @@ describe "UserPages" do
           expect { click_link('delete') }.to change(User, :count).by(-1)
         end
         it { should_not have_link('delete', href: user_path(admin)) }
+
+        describe "attempting to delete itself" do
+          before { delete user_path(admin) }
+          specify { response.should redirect_to(root_path) }
+        end
       end
     end
   end
 
 	describe "profile page" do
   	let(:user) { FactoryGirl.create(:user) }
+    let!(:m1) { FactoryGirl.create(:micropost, user: user, content: "Foo") }
+    let!(:m2) { FactoryGirl.create(:micropost, user: user, content: "Bar") }
+
   	before { visit user_path(user) }
 
   	it { should have_selector('h1',    :text => user.name) }
   	it { should have_selector('title', :text => user.name) }
+
+    describe "microposts" do
+      it { should have_content(m1.content) }
+      it { should have_content(m2.content) }
+      it { should have_content(user.microposts.count) }
+    end
 	end
 
   describe "signup page" do
@@ -87,7 +101,7 @@ describe "UserPages" do
         fill_in "Name",         with: "Example User"
         fill_in "Email",        with: "user@example.com"
         fill_in "Password",     with: "foobar"
-        fill_in "Confirmation", with: "foobar"
+        fill_in "Confirm Password", with: "foobar"
       end
 
       it "should create a user" do
@@ -101,6 +115,22 @@ describe "UserPages" do
         it { should have_link('Sign out') }
         it { should have_selector('title', text: user.name) }
         it { should have_selector('div.alert.alert-success', text: 'Welcome') }
+      end
+    end
+
+    describe "as a signed in user" do
+      let (:user) { FactoryGirl.create(:user) }
+
+      before { sign_in user }
+
+      describe "visiting the sign up page" do
+        before { visit signup_path }
+        it { should have_selector('h1', text: user.name)}
+      end
+
+      describe "submitting a POST request to the Users#create action" do
+        before { post users_path }
+        specify { response.should redirect_to(root_path) }
       end
     end
   end
